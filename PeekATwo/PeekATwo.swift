@@ -8,7 +8,7 @@
 import SwiftUI
 
 @main
-struct Grid_ExplorerApp: App {
+struct PeekATwo: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
