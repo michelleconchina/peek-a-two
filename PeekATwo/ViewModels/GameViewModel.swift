@@ -25,9 +25,12 @@ final class GameViewModel: ObservableObject {
     @Published var cards: [Card] = []
     @Published var score = 0
     @Published var currentLevel = Level.rookie
+    @Published var gameState = GameState()
 
     private var firstSelectedCardIndex: Int?
     private var isProcessing = false
+
+    private let saveKey = "game_state"
 
     private let emojis = [
         "🍎", "🚀", "🐶", "🎮",
@@ -35,7 +38,12 @@ final class GameViewModel: ObservableObject {
         "🍕", "👑", "🎲", "🪐"
     ]
 
+    var isGameComplete: Bool {
+        cards.allSatisfy(\.isMatched)
+    }
+
     init() {
+        loadGameState()
         newGame()
     }
 
@@ -66,8 +74,23 @@ final class GameViewModel: ObservableObject {
 
     func selectLevel(_ level: Level) {
 
+        guard isLevelUnlocked(level) else {
+            return
+        }
+
         currentLevel = level
         newGame()
+    }
+
+    func isLevelUnlocked(_ level: Level) -> Bool {
+
+        guard let index = Level.all.firstIndex(where: {
+            $0.id == level.id
+        }) else {
+            return false
+        }
+
+        return index < gameState.unlockedLevels
     }
 
     func tap(_ card: Card) {
@@ -98,8 +121,14 @@ final class GameViewModel: ObservableObject {
                 cards[tappedIndex].isMatched = true
 
                 score += 10
+                gameState.totalXP += 10
 
                 firstSelectedCardIndex = nil
+
+                if isGameComplete {
+
+                    completeLevel()
+                }
 
             } else {
 
@@ -118,6 +147,61 @@ final class GameViewModel: ObservableObject {
         } else {
 
             firstSelectedCardIndex = tappedIndex
+        }
+    }
+
+    private func completeLevel() {
+
+        gameState.totalXP += 50
+
+        if let currentIndex = Level.all.firstIndex(where: {
+            $0.id == currentLevel.id
+        }) {
+
+            let nextUnlock = currentIndex + 2
+
+            if nextUnlock > gameState.unlockedLevels {
+
+                gameState.unlockedLevels = min(
+                    nextUnlock,
+                    Level.all.count
+                )
+            }
+        }
+
+        saveGameState()
+    }
+
+    private func saveGameState() {
+
+        do {
+
+            let data = try JSONEncoder().encode(gameState)
+
+            UserDefaults.standard.set(data, forKey: saveKey)
+
+        } catch {
+
+            print("Failed to save game state:", error)
+        }
+    }
+
+    private func loadGameState() {
+
+        guard let data = UserDefaults.standard.data(forKey: saveKey) else {
+            return
+        }
+
+        do {
+
+            gameState = try JSONDecoder().decode(
+                GameState.self,
+                from: data
+            )
+
+        } catch {
+
+            print("Failed to load game state:", error)
         }
     }
 }

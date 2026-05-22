@@ -19,7 +19,9 @@ struct ContentView: View {
     }
 
     var body: some View {
+
         NavigationStack {
+
             VStack(spacing: 16) {
 
                 headerSection
@@ -28,37 +30,55 @@ struct ContentView: View {
 
                 gameInfoSection
 
-                // GeometryReader calculates the exact remaining layout area on screen
                 GeometryReader { geometry in
+
                     let columnsCount = Double(viewModel.currentLevel.columns)
                     let totalCards = Double(viewModel.cards.count)
                     let rowCount = ceil(totalCards / columnsCount)
-                    
-                    // Subtract the 12pt gaps between rows from total height
+
                     let totalRowSpacing = (rowCount - 1) * 12
-                    let calculatedHeight = (geometry.size.height - totalRowSpacing) / rowCount
-                    
-                    // Fallback baseline height to prevent layout collapse
+
+                    let calculatedHeight =
+                        (geometry.size.height - totalRowSpacing) / rowCount
+
                     let perfectRowHeight = max(calculatedHeight, 40)
 
                     LazyVGrid(columns: columns, spacing: 12) {
+
                         ForEach(viewModel.cards) { card in
+
                             CardView(card: card)
                                 .frame(height: perfectRowHeight)
                                 .onTapGesture {
-                                    withAnimation(.easeInOut(duration: 0.25)) {
+
+                                    withAnimation(
+                                        .easeInOut(duration: 0.25)
+                                    ) {
                                         viewModel.tap(card)
                                     }
                                 }
                         }
                     }
                 }
+
+                if viewModel.isGameComplete {
+
+                    Label(
+                        "Level Complete!",
+                        systemImage: "star.fill"
+                    )
+                    .font(.headline)
+                    .foregroundStyle(.yellow)
+                    .padding(.bottom, 8)
+                }
             }
             .padding(.horizontal)
-            .padding(.bottom, 12) // Bottom padding protection
+            .padding(.bottom, 12)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+
                 ToolbarItem(placement: .principal) {
+
                     Text("Peek-a-Two")
                         .font(.headline)
                 }
@@ -70,14 +90,21 @@ struct ContentView: View {
 private extension ContentView {
 
     var headerSection: some View {
+
         HStack(alignment: .top) {
+
             VStack(alignment: .leading, spacing: 4) {
+
                 Text("Score")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
                 Text("\(viewModel.score)")
                     .font(.system(size: 42, weight: .bold, design: .rounded))
+
+                Text("XP: \(viewModel.gameState.totalXP)")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
 
                 Text(viewModel.currentLevel.name)
                     .font(.caption)
@@ -88,10 +115,15 @@ private extension ContentView {
             Spacer()
 
             Button {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+
+                withAnimation(
+                    .spring(response: 0.4, dampingFraction: 0.7)
+                ) {
                     viewModel.newGame()
                 }
+
             } label: {
+
                 Label("New Game", systemImage: "arrow.clockwise")
                     .fontWeight(.semibold)
             }
@@ -101,29 +133,50 @@ private extension ContentView {
     }
 
     var levelPickerSection: some View {
+
         Menu {
+
             ForEach(Level.all) { level in
+
                 Button {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+
+                    withAnimation(
+                        .spring(response: 0.4, dampingFraction: 0.8)
+                    ) {
                         viewModel.selectLevel(level)
                     }
+
                 } label: {
-                    if level.id == viewModel.currentLevel.id {
-                        Label(level.name, systemImage: "checkmark")
+
+                    if viewModel.isLevelUnlocked(level) {
+
+                        if level.id == viewModel.currentLevel.id {
+
+                            Label(level.name, systemImage: "checkmark")
+
+                        } else {
+
+                            Text(level.name)
+                        }
+
                     } else {
-                        Text(level.name)
+
+                        Label(level.name, systemImage: "lock.fill")
                     }
                 }
+                .disabled(!viewModel.isLevelUnlocked(level))
             }
+
         } label: {
+
             HStack {
+
                 Image(systemName: "flag.fill")
                     .foregroundStyle(.tint)
 
                 Text("Level: \(viewModel.currentLevel.name)")
                     .font(.body)
                     .fontWeight(.medium)
-                    .foregroundStyle(.primary)
 
                 Spacer()
 
@@ -139,7 +192,9 @@ private extension ContentView {
     }
 
     var gameInfoSection: some View {
+
         HStack {
+
             Label(
                 "\(viewModel.currentLevel.pairs) Pairs",
                 systemImage: "square.grid.2x2"
@@ -150,6 +205,13 @@ private extension ContentView {
             Label(
                 "\(viewModel.currentLevel.columns) Columns",
                 systemImage: "rectangle.split.3x1"
+            )
+
+            Spacer()
+
+            Label(
+                "\(viewModel.gameState.unlockedLevels)/\(Level.all.count)",
+                systemImage: "lock.open.fill"
             )
         }
         .font(.caption)
