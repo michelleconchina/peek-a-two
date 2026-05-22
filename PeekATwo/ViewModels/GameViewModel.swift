@@ -5,21 +5,11 @@
 //  Created by Michelle Conchina on 5/21/26.
 //
 
-//• ViewModel
-//   • Game logic + app state
-//   • Handles:
-//      • card matching
-//      • score
-//      • shuffling
-//      • delays
-//      • timers
-//   • Example:
-//      • GameViewModel
-
 import Foundation
 import SwiftUI
 import Combine
 
+@MainActor
 final class GameViewModel: ObservableObject {
 
     @Published var cards: [Card] = []
@@ -27,8 +17,14 @@ final class GameViewModel: ObservableObject {
     @Published var currentLevel = Level.rookie
     @Published var gameState = GameState()
 
+    @Published var timeLeft = 0
+    @Published var isTimerActive = false
+    @Published var isGameOver = false
+
     private var firstSelectedCardIndex: Int?
     private var isProcessing = false
+
+    private var timerTask: Task<Void, Never>?
 
     private let saveKey = "game_state"
 
@@ -49,9 +45,25 @@ final class GameViewModel: ObservableObject {
 
     func newGame() {
 
+        timerTask?.cancel()
+
         score = 0
+        isGameOver = false
         firstSelectedCardIndex = nil
         isProcessing = false
+
+        if let limit = currentLevel.timeLimit {
+
+            timeLeft = limit
+            isTimerActive = true
+
+            startTimer()
+
+        } else {
+
+            timeLeft = 0
+            isTimerActive = false
+        }
 
         var newCards: [Card] = []
 
@@ -95,7 +107,13 @@ final class GameViewModel: ObservableObject {
 
     func tap(_ card: Card) {
 
-        guard let tappedIndex = cards.firstIndex(where: { $0.id == card.id }) else {
+        guard !isGameOver else {
+            return
+        }
+
+        guard let tappedIndex = cards.firstIndex(where: {
+            $0.id == card.id
+        }) else {
             return
         }
 
@@ -150,7 +168,39 @@ final class GameViewModel: ObservableObject {
         }
     }
 
+    private func startTimer() {
+
+        timerTask?.cancel()
+
+        timerTask = Task {
+
+            while !Task.isCancelled &&
+                    timeLeft > 0 &&
+                    !isGameComplete &&
+                    !isGameOver {
+
+                try? await Task.sleep(for: .seconds(1))
+
+                guard !Task.isCancelled else {
+                    return
+                }
+
+                timeLeft -= 1
+
+                if timeLeft <= 0 {
+
+                    isGameOver = true
+                    isTimerActive = false
+                }
+            }
+        }
+    }
+
     private func completeLevel() {
+
+        timerTask?.cancel()
+
+        isTimerActive = false
 
         gameState.totalXP += 50
 

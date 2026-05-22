@@ -18,6 +18,21 @@ struct ContentView: View {
         )
     }
 
+    private var timerColor: Color {
+
+        switch viewModel.timeLeft {
+
+        case 0...9:
+            return .red
+
+        case 10...20:
+            return .orange
+
+        default:
+            return .green
+        }
+    }
+
     var body: some View {
 
         NavigationStack {
@@ -30,6 +45,11 @@ struct ContentView: View {
 
                 gameInfoSection
 
+                if viewModel.currentLevel.timeLimit != nil {
+
+                    timerSection
+                }
+
                 GeometryReader { geometry in
 
                     let columnsCount = Double(viewModel.currentLevel.columns)
@@ -39,7 +59,7 @@ struct ContentView: View {
                     let totalRowSpacing = (rowCount - 1) * 12
 
                     let calculatedHeight =
-                        (geometry.size.height - totalRowSpacing) / rowCount
+                    (geometry.size.height - totalRowSpacing) / rowCount
 
                     let perfectRowHeight = max(calculatedHeight, 40)
 
@@ -69,6 +89,17 @@ struct ContentView: View {
                     )
                     .font(.headline)
                     .foregroundStyle(.yellow)
+                    .padding(.bottom, 8)
+                }
+
+                if viewModel.isGameOver {
+
+                    Label(
+                        "Time's Up!",
+                        systemImage: "clock.badge.xmark"
+                    )
+                    .font(.headline)
+                    .foregroundStyle(.red)
                     .padding(.bottom, 8)
                 }
             }
@@ -218,6 +249,26 @@ private extension ContentView {
         .fontWeight(.medium)
         .foregroundStyle(.secondary)
         .padding(.horizontal, 8)
+    }
+
+    var timerSection: some View {
+
+        HStack {
+
+            Image(systemName: "clock.fill")
+
+            Text("\(viewModel.timeLeft)s")
+                .contentTransition(.numericText())
+        }
+        .font(.headline)
+        .fontWeight(.bold)
+        .foregroundStyle(timerColor)
+        .scaleEffect(viewModel.timeLeft <= 10 ? 1.1 : 1)
+        .animation(
+            .easeInOut(duration: 0.5)
+                .repeatForever(autoreverses: true),
+            value: viewModel.timeLeft <= 10
+        )
     }
 }
 
