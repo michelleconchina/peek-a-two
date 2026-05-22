@@ -24,13 +24,15 @@ final class GameViewModel: ObservableObject {
 
     @Published var cards: [Card] = []
     @Published var score = 0
+    @Published var currentLevel = Level.rookie
 
     private var firstSelectedCardIndex: Int?
     private var isProcessing = false
 
     private let emojis = [
         "🍎", "🚀", "🐶", "🎮",
-        "🌈", "🔥", "⚽️", "🎵"
+        "🌈", "🔥", "⚽️", "🎵",
+        "🍕", "👑", "🎲", "🪐"
     ]
 
     init() {
@@ -38,15 +40,19 @@ final class GameViewModel: ObservableObject {
     }
 
     func newGame() {
+
         score = 0
         firstSelectedCardIndex = nil
         isProcessing = false
 
         var newCards: [Card] = []
 
-        let selectedEmojis = Array(emojis.prefix(8))
+        let selectedEmojis = Array(
+            emojis.prefix(currentLevel.pairs)
+        )
 
         for emoji in selectedEmojis {
+
             let cardPair = [
                 Card(content: emoji),
                 Card(content: emoji)
@@ -56,6 +62,12 @@ final class GameViewModel: ObservableObject {
         }
 
         cards = newCards.shuffled()
+    }
+
+    func selectLevel(_ level: Level) {
+
+        currentLevel = level
+        newGame()
     }
 
     func tap(_ card: Card) {
